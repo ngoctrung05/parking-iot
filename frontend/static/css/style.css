@@ -1,0 +1,147 @@
+/* Minimal custom CSS for Tailwind-based IoT Parking System */
+
+/* Parking grid layout */
+.parking-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 1rem;
+}
+
+/* Navigation active state */
+.nav-link.active {
+    color: rgb(79 70 229) !important; /* accent-600 */
+    border-bottom-color: rgb(79 70 229) !important;
+}
+
+/* Page content visibility */
+.page-content {
+    display: none;
+}
+
+.page-content:not([style*="display: none"]) {
+    display: block;
+}
+
+/* MQTT status animations */
+@keyframes pulse-dot {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: .5;
+    }
+}
+
+/* Responsive parking grid */
+@media (max-width: 768px) {
+    .parking-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 0.75rem;
+    }
+}
+
+.parking-slot .slot-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.parking-slot .slot-status {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    margin-top: 5px;
+}
+
+.parking-slot .slot-icon {
+    font-size: 2rem;
+    margin-bottom: 5px;
+}
+
+.activity-item {
+    border-left: 3px solid var(--primary-color);
+    padding-left: 10px;
+    margin-bottom: 10px;
+}
+
+.activity-item.entry {
+    border-left-color: var(--success-color);
+}
+
+.activity-item.exit {
+    border-left-color: var(--danger-color);
+}
+
+.activity-item.denied {
+    border-left-color: var(--warning-color);
+}
+
+.activity-item .time {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: none;
+    margin-bottom: 20px;
+}
+
+.card-header {
+    background-color: #fff;
+    border-bottom: 2px solid #f0f0f0;
+    font-weight: 600;
+}
+
+.badge-status {
+    padding: 5px 10px;
+    border-radius: 20px;
+}
+
+.stat-card {
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .parking-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 10px;
+    }
+    
+    .parking-slot .slot-number {
+        font-size: 1.2rem;
+    }
+    
+    .parking-slot .slot-icon {
+        font-size: 1.5rem;
+    }
+}
+
+/* Animation for real-time updates */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(13, 110, 253, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(13, 110, 253, 0);
+    }
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+.table-sm {
+    font-size: 0.875rem;
+}
+
+.badge {
+    font-weight: 500;
+}

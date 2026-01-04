@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: parking-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://parking_user:parking_pass@db:5432/parking_db
+      - MQTT_BROKER_HOST=${MQTT_BROKER_HOST:-your-cluster.s1.eu.hivemq.cloud}
+      - MQTT_BROKER_PORT=${MQTT_BROKER_PORT:-8883}
+      - MQTT_USERNAME=${MQTT_USERNAME}
+      - MQTT_PASSWORD=${MQTT_PASSWORD}
+      - MQTT_USE_TLS=${MQTT_USE_TLS:-True}
+      - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - ./frontend:/app/frontend
+    networks:
+      - parking-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: parking-db
+    environment:
+      - POSTGRES_DB=parking_db
+      - POSTGRES_USER=parking_user
+      - POSTGRES_PASSWORD=parking_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/sample_data.sql:/docker-entrypoint-initdb.d/sample_data.sql
+    networks:
+      - parking-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U parking_user -d parking_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Mosquitto MQTT Broker (OPTIONAL - keep commented for local testing)
+  # Uncomment this service if you want to run a local MQTT broker instead of HiveMQ Cloud
+  # mosquitto:
+  #   image: eclipse-mosquitto:2.0
+  #   container_name: parking-mosquitto
+  #   ports:
+  #     - "1883:1883"
+  #     - "9001:9001"
+  #   volumes:
+  #     - ./mosquitto/config:/mosquitto/config
+  #     - ./mosquitto/data:/mosquitto/data
+  #     - ./mosquitto/log:/mosquitto/log
+  #   networks:
+  #     - parking-network
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "mosquitto_sub -t '$$SYS/#' -C 1 -i healthcheck -W 3 || exit 1"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+
+  # pgAdmin (optional - database management UI)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: parking-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@parking.local
+      - PGADMIN_DEFAULT_PASSWORD=admin123
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    networks:
+      - parking-network
+    restart: unless-stopped
+    profiles:
+      - debug
+
+networks:
+  parking-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
