@@ -2,10 +2,16 @@
 Parking business logic and calculations
 """
 from datetime import datetime, timedelta
+from typing import Optional
 from app.core.config import settings
 
 
-def calculate_parking_fee(duration_minutes: int) -> float:
+def calculate_parking_fee(
+    duration_minutes: int,
+    hourly_rate: Optional[float] = None,
+    daily_max_rate: Optional[float] = None,
+    grace_period_minutes: Optional[int] = None,
+) -> float:
     """
     Calculate parking fee based on duration
     
@@ -15,19 +21,23 @@ def calculate_parking_fee(duration_minutes: int) -> float:
     Returns:
         Fee amount in dollars
     """
+    hourly_rate = settings.HOURLY_RATE if hourly_rate is None else hourly_rate
+    daily_max_rate = settings.DAILY_MAX_RATE if daily_max_rate is None else daily_max_rate
+    grace_period_minutes = settings.GRACE_PERIOD_MINUTES if grace_period_minutes is None else grace_period_minutes
+
     # Apply grace period (free)
-    if duration_minutes <= settings.GRACE_PERIOD_MINUTES:
+    if duration_minutes <= grace_period_minutes:
         return 0.0
     
     # Calculate hours (round up)
     hours = (duration_minutes + 59) // 60  # Ceiling division
     
     # Calculate fee
-    fee = hours * settings.HOURLY_RATE
+    fee = hours * hourly_rate
     
     # Apply daily maximum cap
-    if fee > settings.DAILY_MAX_RATE:
-        fee = settings.DAILY_MAX_RATE
+    if fee > daily_max_rate:
+        fee = daily_max_rate
     
     return round(fee, 2)
 

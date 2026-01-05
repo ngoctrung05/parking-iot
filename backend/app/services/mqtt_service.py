@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models.models import EntryExitLog, ParkingSlot, SystemEvent, EventSeverity
 from app.services.parking_service import calculate_parking_fee
+from app.services.pricing_service import get_pricing
 
 logger = logging.getLogger(__name__)
 
@@ -147,11 +148,17 @@ class MQTTService:
             fee_amount = 0.0
             
             if slot_id and data.get("status") == "success":
+                pricing = get_pricing(db)
                 slot = db.query(ParkingSlot).filter(ParkingSlot.slot_id == slot_id).first()
                 if slot and slot.entry_time:
                     exit_time = datetime.fromtimestamp(data.get("timestamp", datetime.utcnow().timestamp()))
                     duration_minutes = int((exit_time - slot.entry_time).total_seconds() / 60)
-                    fee_amount = calculate_parking_fee(duration_minutes)
+                    fee_amount = calculate_parking_fee(
+                        duration_minutes,
+                        hourly_rate=pricing.hourly_rate,
+                        daily_max_rate=pricing.daily_max_rate,
+                        grace_period_minutes=pricing.grace_period_minutes,
+                    )
                     
                     # Update slot
                     slot.status = "available"

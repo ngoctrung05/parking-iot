@@ -23,7 +23,10 @@ class ConnectionManager:
         logger.info(f"✓ WebSocket client connected. Total: {len(self.active_connections)}")
     
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        try:
+            self.active_connections.remove(websocket)
+        except ValueError:
+            pass
         logger.info(f"✗ WebSocket client disconnected. Total: {len(self.active_connections)}")
     
     async def broadcast(self, message: dict):

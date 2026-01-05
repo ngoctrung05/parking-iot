@@ -190,3 +190,16 @@ class MQTTEvent(BaseModel):
     status: str
     timestamp: int
     available_slots: int
+
+
+# Pricing / Settings Schemas
+class PricingSettings(BaseModel):
+    hourly_rate: float = Field(..., ge=0)
+    daily_max_rate: float = Field(..., ge=0)
+    grace_period_minutes: int = Field(..., ge=0)
+
+
+class PricingSettingsUpdate(BaseModel):
+    hourly_rate: Optional[float] = Field(None, ge=0)
+    daily_max_rate: Optional[float] = Field(None, ge=0)
+    grace_period_minutes: Optional[int] = Field(None, ge=0)
