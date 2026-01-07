@@ -25,22 +25,32 @@ def _sync_cards_to_esp32(db: Session):
         # Get all active cards
         active_cards = db.query(RFIDCard).filter(RFIDCard.is_active == True).all()
         
-        # Build cards array for ESP32
+        # Build cards array for ESP32.
+        # Keep payload minimal to avoid MQTT buffer truncation on device.
         cards_data = [
             {
                 "card_uid": card.card_uid,
-                "owner_name": card.owner_name or "Unknown",
-                "access_level": card.access_level,
-                "is_active": card.is_active
+                "access_level": getattr(card.access_level, "value", card.access_level),
+                "is_active": bool(card.is_active),
             }
             for card in active_cards
         ]
-        
+
+        payload = {"cards": cards_data}
+
         # Send sync command via MQTT
-        success = mqtt_service.send_command("sync_whitelist", {"cards": cards_data})
+        success = mqtt_service.send_command("sync_whitelist", payload)
         
         if success:
-            logger.info(f"✓ Synced {len(cards_data)} cards to ESP32")
+            try:
+                import json
+                approx_bytes = len(json.dumps({"command": "sync_whitelist", **payload}))
+            except Exception:
+                approx_bytes = None
+            logger.info(
+                f"✓ Synced {len(cards_data)} cards to ESP32"
+                + (f" (~{approx_bytes} bytes)" if approx_bytes is not None else "")
+            )
         else:
             logger.warning("⚠ Failed to send sync command to ESP32")
         
@@ -182,28 +192,35 @@ def update_card(
 
 
 @router.delete("/{card_uid}")
-def deactivate_card(
+def delete_card(
     card_uid: str,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """
-    Deactivate (soft delete) RFID card
+    Permanently delete RFID card from database.
+
+    Note: Entry/exit logs reference cards via a non-null foreign key, so we
+    delete related logs first to avoid FK constraint failures.
     """
     card = db.query(RFIDCard).filter(RFIDCard.card_uid == card_uid).first()
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
-    
-    card.is_active = False
-    from datetime import datetime
-    card.updated_at = datetime.utcnow()
-    
+
+    from app.models.models import EntryExitLog
+
+    # Delete dependent logs first (FK: entry_exit_logs.card_uid -> rfid_cards.card_uid)
+    db.query(EntryExitLog).filter(EntryExitLog.card_uid == card_uid).delete(
+        synchronize_session=False
+    )
+
+    db.delete(card)
     db.commit()
-    
-    # Auto-sync to ESP32
+
+    # Auto-sync to ESP32 so removed card no longer exists in whitelist
     _sync_cards_to_esp32(db)
-    
-    return {"message": "Card deactivated successfully"}
+
+    return {"message": "Card deleted successfully"}
 
 
 @router.get("/{card_uid}/history")

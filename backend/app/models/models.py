@@ -98,3 +98,14 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     last_login = Column(DateTime, nullable=True)
+
+
+class ParkingPricing(Base):
+    """Runtime-configurable pricing settings (single row)"""
+    __tablename__ = "parking_pricing"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    hourly_rate = Column(Float, nullable=False, default=5.0)
+    daily_max_rate = Column(Float, nullable=False, default=50.0)
+    grace_period_minutes = Column(Integer, nullable=False, default=15)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

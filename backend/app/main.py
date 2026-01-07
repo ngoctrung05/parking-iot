@@ -17,7 +17,7 @@ from app.core.database import SessionLocal, init_db
 from app.core.security import get_password_hash
 from app.models.models import User, RFIDCard, ParkingSlot
 from app.services.mqtt_service import mqtt_service
-from app.api import auth, slots, cards, logs, stats, commands, websocket
+from app.api import auth, slots, cards, logs, stats, commands, websocket, settings as settings_api
 
 # Configure logging
 logging.basicConfig(
@@ -136,6 +136,18 @@ def create_initial_data():
             for card in default_cards:
                 db.add(card)
             logger.info("✓ Created 3 default RFID cards")
+
+        # Create pricing configuration row if not exists
+        from app.models.models import ParkingPricing
+        pricing = db.query(ParkingPricing).first()
+        if not pricing:
+            pricing = ParkingPricing(
+                hourly_rate=settings.HOURLY_RATE,
+                daily_max_rate=settings.DAILY_MAX_RATE,
+                grace_period_minutes=settings.GRACE_PERIOD_MINUTES,
+            )
+            db.add(pricing)
+            logger.info("✓ Created default pricing settings")
         
         db.commit()
         
@@ -162,7 +174,8 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins_list,
+    # allow_origins=settings.allowed_origins_list,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -176,6 +189,7 @@ app.include_router(logs.router)
 app.include_router(stats.router)
 app.include_router(commands.router)
 app.include_router(websocket.router)
+app.include_router(settings_api.router)
 
 # Mount static files and templates
 app.mount("/static", StaticFiles(directory="../frontend/static"), name="static")
